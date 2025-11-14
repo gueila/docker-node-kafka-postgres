@@ -52,17 +52,17 @@ services:
     networks:
       - app-network
 
-  # Aplicación Node.js
-  app:
-    build: .
-    container_name: node_app
+  # Aplicación Node.js - Producer API
+  producer-api:
+    build: ./producer-api
+    container_name: producer_api
     depends_on:
       postgres:
         condition: service_started
       kafka:
         condition: service_healthy
     ports:
-      - "4000:3000"
+      - "3000:3000"
     environment:
       NODE_ENV: development
       DB_HOST: postgres
@@ -72,7 +72,35 @@ services:
       DB_NAME: myapp
       KAFKA_BROKER: kafka:29092
     volumes:
-      - .:/usr/src/app
+      - ./producer-api:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
+    command: npm run dev
+    restart: on-failure
+
+  # Consumer Service - Procesa mensajes de Kafka
+  consumer-service:
+    build: ./consumer-service
+    container_name: consumer_service
+    depends_on:
+      postgres:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      DB_NAME: myapp
+      KAFKA_BROKER: kafka:29092
+      PORT: 3001
+    volumes:
+      - ./consumer-service:/usr/src/app
       - /usr/src/app/node_modules
     networks:
       - app-network
